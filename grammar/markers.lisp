@@ -60,6 +60,15 @@
    (=alpha-upper-marker)
    (=big-roman-marker)))
 
+(defun =next-marker ()
+  (=let* ((_
+           (=zero-or-more
+            (=not (=marker))))
+          (markers
+           (=zero-or-more
+            (=marker))))
+    (=result markers)))
+
 (defun =marked-paragraph ()
   (=let* ((marker (=marker))
           (rest-of-par

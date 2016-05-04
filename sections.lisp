@@ -2,21 +2,27 @@
 
 (defstruct section
   (section-number "" :type string)
+  (part-number "" :type string)
   (subject "" :type string)
   (paragraphs '() :type list))
 
 (defun build-section (section-elem)
   (let* ((sec-num-elem (first (get-elements-by-tag-name section-elem "SECTNO")))
          (subject-elem (first (get-elements-by-tag-name section-elem "SUBJECT")))
-         (section-number (text sec-num-elem))
+         (section-info (run (=section) (text sec-num-elem)))
+         (section-number
+          (cdr (assoc :section-number section-info)))
+         (part-number
+          (cdr (assoc :part-number section-info)))
          (subject (text subject-elem))
          (paragraphs
           (flatten
            (loop
               for child across (children section-elem)
               collect
-                (when (string= "P" (tag-name child))
-                  (build-paragraph nil child)))))
+                (when (and (element-p child)
+                           (string= "P" (tag-name child)))
+                  (build-paragraph child)))))
          (markers
           (mapcar #'(lambda (par)
                       (regex-replace #\(
@@ -27,6 +33,7 @@
          (paragraph-tree
           (build-paragraph-tree paragraphs hierarchy)))
     (make-section :section-number section-number
+                  :part-number part-number
                   :subject subject
                   :paragraphs paragraph-tree)))
     
@@ -88,3 +95,20 @@
               <P>(2) Neither the act nor this part is intended to encourage unsound lending practices or the allocation of credit.</P>
               <P>(c)<E T=\"03\">Scope.</E>This part applies to certain financial institutions, including banks, savings associations, credit unions, and other mortgage lending institutions, as defined in &#xA7; 1003.2. The regulation requires an institution to report data to the appropriate Federal agency about home purchase loans, home improvement loans, and refinancings that it originates or purchases, or for which it receives applications; and to disclose certain data to the public.</P>
             </SECTION>")) 0)))
+
+(defun section->xml (section root label-root)
+  (let* ((section-number (section-section-number section))
+         (part-number (section-part-number section))
+         (subject (section-subject section))
+         (label (format nil "~A-~A" label-root section-number))
+         (paragraphs (section-paragraphs section))
+         (section-elem
+          (make-element root "section")))
+    (set-attribute section-elem "label" label)
+    (set-attribute section-elem "sectionNum" section-number)
+    (make-fulltext-element section-elem "subject" 
+                           :text (format nil "~C ~D.~D ~A" #\section_sign part-number section-number subject))
+    (loop
+       for par in paragraphs
+       do
+         (paragraph->xml par section-elem label))))

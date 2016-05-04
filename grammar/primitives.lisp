@@ -27,6 +27,11 @@
   (=let* ((word (=one-or-more (=satisfies #'alpha-char-p))))
     (=result (concatenate 'string word))))
 
+(defun =non-whitespace-token ()
+  (=skip-whitespace
+   (=zero-or-more
+    (=not (=whitespace)))))
+
 (defun =one-of-words (list-of-words)
   (=let* ((word (=word)))
     (if (find word list-of-words :test #'string=)
@@ -69,7 +74,7 @@
              (=string-of (=digit))
              (=one-or-more (=word))
              (=punctuation)))))
-    (=result (format nil "~{~A~}" (stringify sentence-list)))))
+    (=result (list->string (stringify sentence-list)))))
 
 (defun =appendix ()
   (=let* ((appendix (=or (=string "Appendix")
@@ -80,3 +85,41 @@
                                       (=digit))))))
     (=result (cons 'APPENDIX (stringify letter)))))
 
+(defun =section ()
+  (=let* ((_
+           (=or
+            (=string "Section")
+            (=string "section")
+            (=character #\SECTION_SIGN)))
+          (part-number
+           (=skip-whitespace
+            (=digit-sequence)))
+          (_ (=character #\.))
+          (section-number
+           (=digit-sequence)))
+    (=result (list (cons :part-number part-number)
+                   (cons :section-number section-number)))))
+
+(defun =emph-tag-open ()
+  (=let* ((result
+           (=list 
+            (=string "<E T=\"")
+            (=digit-sequence)
+            (=string "\">"))))
+    (=result (list->string result))))
+
+(defun =emph-tag-close ()
+  (=string "</E>"))
+
+(defun =emph-text ()
+  (=let* ((result
+           (=list
+            (=emph-tag-open)
+            (=one-or-more
+             (=or
+              (=word)
+              (=string-of (=whitespace))))
+            (=emph-tag-close))))
+    (=result (list (cons 'OPEN-EMPH (first result))
+                   (cons 'CONTENTS (list->string (second result)))
+                   (cons 'CLOSE-EMPH (last result))))))

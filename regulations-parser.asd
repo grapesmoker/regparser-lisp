@@ -8,12 +8,15 @@
   :depends-on (#:mpc #:plump #:cl-ppcre #:drakma #:cl-json)
   :components ((:file "package")
                (:file "utils")
+               (:file "meta")
+               (:file "toc")
+               (:file "hierarchy")
                (:file "regulations-parser")
                (:file "tree")
                (:module grammar
                         :components
                         ((:file "primitives")
                          (:file "dates")
-                         (:file "markers")))))
-
-
+                         (:file "markers")))
+               (:file "paragraphs")
+               (:file "sections")))

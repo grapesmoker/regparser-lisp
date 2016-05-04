@@ -7,8 +7,12 @@
   (depth -1 :type integer)
   (subparagraphs '() :type list))
 
-(defun build-paragraph (root p-elem)
-  (declare (ignore root))
+(defun strip-par-tags (par-text)
+  (regex-replace "</P>"
+                 (regex-replace "<P>" par-text "")
+                 ""))
+
+(defun build-paragraph (p-elem)
   (strip p-elem)
   (let* ((p-elem-text (strip-par-tags (serialize p-elem nil)))
          (parsed-par (run (=paragraph) p-elem-text))
@@ -80,30 +84,6 @@
              ;; (format t "option 5~%")
              (list paragraph))))))
 
-(defun =emph-tag-open ()
-  (=let* ((result
-           (=list 
-            (=string "<E T=\"")
-            (=digit-sequence)
-            (=string "\">"))))
-    (=result (format nil "~{~A~}" result))))
-
-(defun =emph-tag-close ()
-  (=string "</E>"))
-
-(defun =emph-text ()
-  (=let* ((result
-           (=list
-            (=emph-tag-open)
-            (=one-or-more
-             (=or
-              (=word)
-              (=string-of (=whitespace))))
-            (=emph-tag-close))))
-    (=result (list (cons 'OPEN-EMPH (first result))
-                   (cons 'CONTENTS (list->string (second result)))
-                   (cons 'CLOSE-EMPH (last result))))))
-
 (defun =paragraph-title ()
   (=let* ((result
            (=list
@@ -117,9 +97,9 @@
             (=maybe (=character #\—))
             (=emph-tag-close))))
     (=result (list (cons 'OPEN-EMPH (first result))
-                   (cons 'CONTENT (format nil "~{~A~}" (concatenate 'list
-                                                                    (second result)
-                                                                    (third result))))
+                   (cons 'CONTENT (list->string (concatenate 'list
+                                                             (second result)
+                                                             (third result))))
                    (cons 'CLOSE-EMPH (fifth result))))))
 
 (defun =paragraph ()
@@ -185,7 +165,62 @@
 (defparameter *text-5*
   (strip-par-tags (serialize *test-paragraph-5* nil)))
 
-(defun strip-par-tags (par-text)
-  (regex-replace "</P>"
-                 (regex-replace "<P>" par-text "")
-                 ""))
+(defun build-defined-terms (text)
+  (let ((defined-terms (extract-all-tokens #'defined-term text)))
+    (loop
+       with running-content = text
+       for def in defined-terms
+       do
+         (let* ((term (strip-emph-tags (cdr (assoc :token def))))
+                (start (cdr (assoc :start def)))
+                (end (cdr (assoc :end def)))
+                (content (split-at-locations text start end))
+                (term-xml (format nil "<def term=~S>~S</def>" 
+                                  (string-downcase term)
+                                  term)))
+           (
+           
+(defun split-at-locations (text start-end-list)
+  (loop
+     for start-end-pair in start-end-list
+     with current-start = 0
+     ;; with current-end = (first (first start-end-list))
+     collect
+       (let* ((start (first start-end-pair))
+              (end (second start-end-pair))
+              (current-end start)
+              (piece (subseq text current-start current-end)))
+         (setf current-start end)
+         piece)
+     into result
+     finally
+       (return (append result (subseq text (second start-end-pair))))))
+
+(defun insert-into-locations (text values start-list end-list)
+  (loop
+     for val in values
+     for start in start-list
+     for end in end-list
+     do
+       (let* ((split-text (split-at-locations text start end))
+              (first-piece (first split-text))
+              (second-piece (second split-text)))
+         (
+
+(defun paragraph->xml (par root label-root)
+  (let* ((marker (paragraph-marker par))
+         (par-label (format nil "~A-~A" label-root (strip-marker marker)))
+         (content (paragraph-content par))
+         (title (paragraph-title par))
+         (subparagraphs (paragraph-subparagraphs par))
+         (par-elem
+          (make-element root "paragraph")))
+    (set-attribute par-elem "label" par-label)
+    (set-attribute par-elem "marker" marker)
+    (when (not (string= "" title))
+      (make-fulltext-element par-elem "title" :text title))
+    (make-fulltext-element par-elem "content" :text content)
+    (loop
+       for par in subparagraphs
+       do
+         (paragraph->xml par par-elem par-label))))

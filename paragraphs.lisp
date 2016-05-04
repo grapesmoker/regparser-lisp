@@ -165,20 +165,20 @@
 (defparameter *text-5*
   (strip-par-tags (serialize *test-paragraph-5* nil)))
 
-(defun build-defined-terms (text)
-  (let ((defined-terms (extract-all-tokens #'defined-term text)))
-    (loop
-       with running-content = text
-       for def in defined-terms
-       do
-         (let* ((term (strip-emph-tags (cdr (assoc :token def))))
-                (start (cdr (assoc :start def)))
-                (end (cdr (assoc :end def)))
-                (content (split-at-locations text start end))
-                (term-xml (format nil "<def term=~S>~S</def>" 
-                                  (string-downcase term)
-                                  term)))
-           (
+;; (defun build-defined-terms (text)
+;;   (let ((defined-terms (extract-all-tokens #'defined-term text)))
+;;     (loop
+;;        with running-content = text
+;;        for def in defined-terms
+;;        do
+;;          (let* ((term (strip-emph-tags (cdr (assoc :token def))))
+;;                 (start (cdr (assoc :start def)))
+;;                 (end (cdr (assoc :end def)))
+;;                 (content (split-at-locations text start end))
+;;                 (term-xml (format nil "<def term=~S>~S</def>" 
+;;                                   (string-downcase term)
+;;                                   term)))
+;;            (
            
 (defun split-at-locations (text start-end-list)
   (loop
@@ -194,18 +194,19 @@
          piece)
      into result
      finally
-       (return (append result (subseq text (second start-end-pair))))))
+       (return (append result (list (subseq text (second start-end-pair)))))))
 
-(defun insert-into-locations (text values start-list end-list)
-  (loop
-     for val in values
-     for start in start-list
-     for end in end-list
-     do
-       (let* ((split-text (split-at-locations text start end))
-              (first-piece (first split-text))
-              (second-piece (second split-text)))
-         (
+(defun insert-into-locations (text values start-end-list)
+  (let* ((split-text (split-at-locations text start-end-list)))
+    (list->string
+     (loop
+	for val in values
+	for piece in split-text
+	append
+	  (list piece val)
+	into result
+	finally
+	  (return (append result (last split-text)))))))
 
 (defun paragraph->xml (par root label-root)
   (let* ((marker (paragraph-marker par))

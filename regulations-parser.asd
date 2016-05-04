@@ -10,7 +10,6 @@
                (:file "utils")
                (:file "meta")
                (:file "toc")
-               (:file "hierarchy")
                (:file "regulations-parser")
                (:file "tree")
                (:module grammar
@@ -18,5 +17,6 @@
                         ((:file "primitives")
                          (:file "dates")
                          (:file "markers")))
+               (:file "hierarchy")
                (:file "paragraphs")
                (:file "sections")))

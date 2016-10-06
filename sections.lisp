@@ -4,9 +4,10 @@
   (section-number "" :type string)
   (part-number "" :type string)
   (subject "" :type string)
+  (label "" :type string)
   (paragraphs '() :type list))
 
-(defun build-section (section-elem)
+(defun build-section (section-elem label-root)
   (let* ((sec-num-elem (first (get-elements-by-tag-name section-elem "SECTNO")))
          (subject-elem (first (get-elements-by-tag-name section-elem "SUBJECT")))
          (section-info (run (=section) (text sec-num-elem)))
@@ -15,6 +16,7 @@
          (part-number
           (cdr (assoc :part-number section-info)))
          (subject (text subject-elem))
+         (label (format nil "~A-~D" label-root section-number))
          (paragraphs
           (flatten
            (loop
@@ -25,20 +27,22 @@
                   (build-paragraph child)))))
          (markers
           (mapcar #'(lambda (par)
-                      (regex-replace #\(
-                                     (regex-replace #\) (paragraph-marker par) "") ""))
+		      (strip-marker (paragraph-marker par)))
+                      ;;(regex-replace #\(
+                      ;;               (regex-replace #\) (paragraph-marker par) "") ""))
                   paragraphs))
          (hierarchy
           (compute-marker-hierarchy markers))
          (paragraph-tree
-          (build-paragraph-tree paragraphs hierarchy)))
+          (build-paragraph-tree paragraphs hierarchy label)))
     (make-section :section-number section-number
                   :part-number part-number
                   :subject subject
+                  :label label
                   :paragraphs paragraph-tree)))
     
 
-(defun build-paragraph-tree (paragraphs hierarchy)
+(defun build-paragraph-tree (paragraphs hierarchy label-root)
   (loop
      with last-par-at-depth = (make-hash-table)
      with top-level-pars = '()
@@ -71,13 +75,19 @@
                   (push par (paragraph-subparagraphs last-par-at-prev-depth))
                   (setf (gethash depth last-par-at-depth) par)))))
      finally
-       (labels ((recursive-reverse (list-of-pars)
+       (labels ((recursive-reverse-and-label (list-of-pars par-label-root)
                   (loop
                      for par in list-of-pars
+                     for index downfrom (length list-of-pars)
                      do
-                       (setf (paragraph-subparagraphs par) (reverse (paragraph-subparagraphs par)))
-                       (recursive-reverse (paragraph-subparagraphs par)))))
-         (recursive-reverse top-level-pars)
+                       (let ((par-label
+                              (if (not (string= (paragraph-marker par) ""))
+                                  (format nil "~A-~A" par-label-root (strip-marker (paragraph-marker par)))
+                                  (format nil "~A-p~D" par-label-root index))))
+                         (setf (paragraph-label par) par-label)
+                         (setf (paragraph-subparagraphs par) (reverse (paragraph-subparagraphs par)))
+                         (recursive-reverse-and-label (paragraph-subparagraphs par) par-label)))))
+         (recursive-reverse-and-label top-level-pars label-root)
          (return (reverse top-level-pars)))))
 
 (defparameter *test-section-1*
@@ -96,19 +106,41 @@
               <P>(c)<E T=\"03\">Scope.</E>This part applies to certain financial institutions, including banks, savings associations, credit unions, and other mortgage lending institutions, as defined in &#xA7; 1003.2. The regulation requires an institution to report data to the appropriate Federal agency about home purchase loans, home improvement loans, and refinancings that it originates or purchases, or for which it receives applications; and to disclose certain data to the public.</P>
             </SECTION>")) 0)))
 
-(defun section->xml (section root label-root)
-  (let* ((section-number (section-section-number section))
-         (part-number (section-part-number section))
-         (subject (section-subject section))
-         (label (format nil "~A-~A" label-root section-number))
-         (paragraphs (section-paragraphs section))
-         (section-elem
-          (make-element root "section")))
-    (set-attribute section-elem "label" label)
-    (set-attribute section-elem "sectionNum" section-number)
-    (make-fulltext-element section-elem "subject" 
-                           :text (format nil "~C ~D.~D ~A" #\section_sign part-number section-number subject))
-    (loop
-       for par in paragraphs
-       do
-         (paragraph->xml par section-elem label))))
+;; (defun section->xml (section root label-root)
+;;   (let* ((section-number (section-section-number section))
+;;          (part-number (section-part-number section))
+;;          (subject (section-subject section))
+;;          (label (format nil "~A-~A" label-root section-number))
+;;          (paragraphs (section-paragraphs section))
+;;          (section-elem
+;;           (make-element root "section")))
+;;     (set-attribute section-elem "label" label)
+;;     (set-attribute section-elem "sectionNum" section-number)
+;;     (make-fulltext-element section-elem "subject" 
+;;                            :text (format nil "~C ~D.~D ~A" #\section_sign part-number section-number subject))
+;;     (loop
+;;        for par in paragraphs
+;;        do
+;;          (paragraph->xml par section-elem label))))
+
+
+(defun section->xml (section &optional (depth 0) (indent 4))
+  (let* ((label (section-label section))
+	 (paragraphs (section-paragraphs section))
+	 (section-start-tag
+	  (format nil "~A<section label=\"~A\">~%" (indent (* depth indent)) label))
+	 (title
+	  (format nil "~A<title>~A</title>~%"
+		  (indent (* (+ depth 1) indent))
+		  (section-subject section)))
+	 (section-end-tag (format nil "</section>~%"))
+	 (paragraph-xml-list
+	  (loop
+	     for par in paragraphs
+	     collect
+	       (paragraph->xml par (+ depth 1) indent))))
+    (format nil "~A~A~{~A~}~A"
+	    section-start-tag
+	    title
+	    paragraph-xml-list
+	    section-end-tag)))

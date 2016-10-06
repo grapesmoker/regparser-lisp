@@ -133,17 +133,19 @@
                (=result markers))))
     (loop
        with end-index = 0
+       with start-index = 0
        with tokens = '()
        with current-text = text
        while (< end-index (length text))
        do
          (let* ((next-token-loc (run (=next-token) current-text :result #'identity))
                 (next-token (list->string (caar next-token-loc)))
-                (next-end (mpc::index-simple-string-position (cdar next-token-loc)))
-                (start-index (- next-end (length next-token))))
-           (format t "~A ~A ~A ~A~%" next-token next-end start-index (length next-token))
+                (next-end (mpc::index-simple-string-position (cdar next-token-loc))))
+                ;; (next-start (- next-end (length next-token))))
            (incf end-index next-end)
+           ;; (format t "~A ~A ~A ~A ~A~%" next-token next-end next-start end-index (length next-token))
            (setf current-text (subseq text end-index))
+           (setf start-index (- end-index (length next-token)))
            (when (not (string= "" next-token))
              (push (list 
                     (cons token-name next-token)
@@ -158,4 +160,3 @@
                                 (regex-replace #\. marker "")
                                 "")
                  ""))
-    

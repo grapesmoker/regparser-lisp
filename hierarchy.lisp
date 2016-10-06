@@ -7,7 +7,7 @@
 
 (declaim (optimize (safety 0) (debug 0) (speed 3)))
 
-(defun is-successor (first-marker second-marker)
+(defun is-successor (first-marker second-marker &key (generalized nil))
   "True iff the second marker follows the first marker."
   (loop
      for marker-type in *all-markers*
@@ -16,17 +16,21 @@
              (pos-2 (position second-marker marker-type :test #'string=)))
          (when (and (not (null pos-1))
                     (not (null pos-2))
-                    (= (+ 1 pos-1) pos-2))
+		    (if generalized
+			(> pos-2 pos-1)
+			(= (+ 1 pos-1) pos-2)))
            (return t)))
      finally (return nil)))
 
-(defun is-descendant (first-marker second-marker)
+(defun is-descendant (first-marker second-marker &key (generalized nil))
   "True iff the second marker is a descendant of the first marker."
   (loop
      with root-markers = (first *all-markers*)
      for marker-type in *all-markers*
      if (and (find first-marker root-markers :test #'string=)
-             (string= second-marker (first marker-type)))
+	     (if generalized
+		 (find second-marker marker-type :test #'string=)
+		 (string= second-marker (first marker-type))))
      do (return t)
      else
      do (setf root-markers marker-type)))
@@ -41,7 +45,7 @@
        (= (marker-depth m1) (marker-depth m2))
        (eql (marker-desc-allowed m1) (marker-desc-allowed m2))))
 
-(defun compute-marker-hierarchy (markers)
+(defun compute-marker-hierarchy (markers &key (generalized nil))
   (declare (type list markers)
            (optimize (safety 0) (debug 0) (speed 3)))
   (let* ((depth 1)
@@ -66,7 +70,7 @@
          (setf all-depths (loop for key being the hash-keys of last-marker-at-depth collect key))
          (setf current-depth depth)
          (setf inserted-marker nil)
-         (cond ((is-successor prev-marker current-marker)
+         (cond ((is-successor prev-marker current-marker :generalized generalized)
                 (loop
                    for md in marker-depths
                    if (>= (marker-depth md) prev-depth)
@@ -76,7 +80,7 @@
                   (push new-marker marker-depths)
                   (setf (gethash prev-depth last-marker-at-depth) current-marker)
                   (setf inserted-marker t)))
-               ((is-descendant prev-marker current-marker)
+               ((is-descendant prev-marker current-marker :generalized generalized)
                 (when (> (+ 1 prev-depth) depth)
                   (incf depth))
                 (let ((new-marker (make-marker :symbol current-marker
@@ -92,7 +96,7 @@
             do
               (let ((last-marker-at-this-depth (gethash current-depth last-marker-at-depth)))
                 (declare (type string last-marker-at-this-depth))
-                (cond ((and (is-successor last-marker-at-this-depth current-marker)
+                (cond ((and (is-successor last-marker-at-this-depth current-marker :generalized generalized)
                             (find (make-marker :symbol last-marker-at-this-depth :depth current-depth) 
                                   marker-depths :test #'marker-equality))
                        (loop
@@ -104,8 +108,8 @@
                          (setf (gethash current-depth last-marker-at-depth) current-marker)
                          (setf inserted-marker t)
                          (setf prev-depth current-depth)))
-                      ((and (is-descendant last-marker-at-this-depth current-marker)
-                            (not (is-descendant prev-marker current-marker))
+                      ((and (is-descendant last-marker-at-this-depth current-marker :generalized generalized)
+                            (not (is-descendant prev-marker current-marker :generalized generalized))
                             (find (make-marker :symbol last-marker-at-this-depth :depth current-depth)
                                   marker-depths :test #'marker-equality))
                        (when (> (+ 1 current-depth) depth)

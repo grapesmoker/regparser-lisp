@@ -3,8 +3,8 @@
 ;; Find nodes in the tree based on a predicate
 (defun select-by (predicate root)
   (let ((accum '()))
-    (if (and 
-         (element-p root)
+    (if (and
+	 (element-p root)
          (funcall predicate root))
          (push root accum))
     (labels ((collector (node)

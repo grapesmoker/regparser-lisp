@@ -40,7 +40,8 @@
 
 (defun =non-period-punc ()
   (=string-of
-   (=one-of '(#\! #\? #\, #\: #\;))))
+   (=one-of '(#\! #\? #\, #\: #\; #\' #\" #\( #\) #\- #\SECTION_SIGN
+              #\LEFT_DOUBLE_QUOTATION_MARK #\RIGHT_DOUBLE_QUOTATION_MARK))))
 
 (defun =punctuation ()
   (=string-of
@@ -52,7 +53,9 @@
 
 (defun =misc-char ()
   (=string-of
-   (=one-of '(#\= #\" #\/ #\-))))
+   (=one-of '(#\= #\" #\/ #\- #\SECTION_SIGN
+              #\LEFT_DOUBLE_QUOTATION_MARK #\RIGHT_DOUBLE_QUOTATION_MARK
+              #\' #\( #\)))))
 
 (defun =parens ()
   (=string-of
@@ -123,3 +126,6 @@
     (=result (list (cons 'OPEN-EMPH (first result))
                    (cons 'CONTENTS (list->string (second result)))
                    (cons 'CLOSE-EMPH (last result))))))
+
+(defun =intro ()
+  (=string "Introduction"))

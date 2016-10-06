@@ -16,7 +16,16 @@
                         :components
                         ((:file "primitives")
                          (:file "dates")
-                         (:file "markers")))
+                         (:file "markers")
+                         (:file "terms")
+                         (:file "citations")
+                         (:file "interps")))
                (:file "hierarchy")
                (:file "paragraphs")
-               (:file "sections")))
+               (:file "sections")
+               (:file "subpart")
+               (:file "part")
+               (:file "interpretations")
+               (:file "interp-paragraph")
+               (:file "interp-section")))
+               

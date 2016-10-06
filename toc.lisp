@@ -7,7 +7,8 @@
          (contents (select-by (where :tag "CONTENTS") part))
          (section-numbers (nreverse (select-by (where :tag "SECTNO") contents)))
          (section-subjects (nreverse (select-by (where :tag "SUBJECT") contents)))
-         (appendices (nreverse (select-by (where :tag "FP" :attribute '("SOURCE" "FP-2")) notice-root)))
+         (appendices (nreverse (select-by
+				(where :tag "FP" :attribute '("SOURCE" "FP-2")) notice-root)))
          (table-of-contents (make-element result-root "tableOfContents")))
     (loop
        for sec-num in section-numbers
@@ -32,7 +33,8 @@
                     (appendix-letter-elem (make-element appendix-entry "appendixLetter"))
                     (appendix-subject-elem (make-element appendix-entry "appendixSubject")))
                ;; (format t "~A ~A~%" appendix-letter appendix-subject)
-               (set-attribute appendix-entry "target" (format nil "~D-~A" part-number appendix-letter))
+               (set-attribute appendix-entry "target"
+			      (format nil "~D-~A" part-number appendix-letter))
                (make-text-node appendix-letter-elem appendix-letter)
                (make-text-node appendix-subject-elem appendix-subject)))))
     table-of-contents))

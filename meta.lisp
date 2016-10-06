@@ -43,5 +43,5 @@
       (make-text-node cfr-section-elem cfr-part)
       (make-text-node url-elem (regulation-meta-url reg-meta))
       (make-text-node doc-number-elem doc-number)
-      (serialize preamble-element)
+      ;; (serialize preamble-element)
       preamble-element)))

@@ -122,7 +122,9 @@
 (defun extract-all-tokens (parser text &key (token-name :token))
   ;; Given a parser that extracts a particular token, this function
   ;; extracts all tokens matched by that parser from the text and
-  ;; reports them as triples of (:token :start-position :end-position) 
+  ;; reports them as triples of (:token :start-position :end-position)
+  (declare (optimize (debug 3)))
+  ;; (print text)
   (labels ((=next-token ()
              (=let* ((_
                       (=zero-or-more
@@ -133,24 +135,27 @@
                (=result markers))))
     (loop
        with end-index = 0
-       with start-index = 0
+       ;; with start-index = 0
        with tokens = '()
        with current-text = text
        while (< end-index (length text))
        do
-         (let* ((next-token-loc (run (=next-token) current-text :result #'identity))
-                (next-token (list->string (caar next-token-loc)))
-                (next-end (mpc::index-simple-string-position (cdar next-token-loc))))
-                ;; (next-start (- next-end (length next-token))))
-           (incf end-index next-end)
-           ;; (format t "~A ~A ~A ~A ~A~%" next-token next-end next-start end-index (length next-token))
-           (setf current-text (subseq text end-index))
-           (setf start-index (- end-index (length next-token)))
-           (when (not (string= "" next-token))
-             (push (list 
-                    (cons token-name next-token)
-                    (cons :start start-index)
-                    (cons :end end-index)) tokens)))
+         (let* ((next-token (car (run (=next-token) current-text)))
+		(token-start (search next-token current-text))
+		(token-end (+ token-start (length next-token)))
+		(length-diff (- (length text) (length current-text))))
+	   ;; (format t "~A ~A ~A~%" next-token token-start token-end)
+           (incf end-index token-end)
+           (setf current-text (subseq current-text token-end))
+	   (if next-token
+	       (progn
+		 (when (not (string= "" next-token))
+		   (push (list 
+			  (cons token-name next-token)
+			  (cons :start (+ token-start length-diff))
+			  (cons :end (+ token-end length-diff))) tokens)))
+	       (progn
+		 (setf end-index (length text)))))
        finally
          (return (reverse tokens)))))
 

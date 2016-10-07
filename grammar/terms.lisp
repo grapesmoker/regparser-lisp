@@ -1,20 +1,44 @@
 (in-package :regulations-parser)
 
-(defun =defined-term ()
-  (=let* ((emph-open (=emph-tag-open))
+(defparameter +prohibited-terms+
+  (append *lowercase-letters* *uppercase-letters* *numerics*
+	  '("e.g.," "e.g." "see")))
+
+(defun =tagged-term ()
+  (=let* ((_ (=emph-tag-open))
           (term 
            (=one-or-more
-            (=or
-             (=word)
-             (=string-of (=whitespace))
-             (=non-period-punc))))
-          (emph-close (=emph-tag-close)))
-    (=result (list->string (list emph-open (list->string term) emph-close)))))
+	    (=not (=emph-tag-close))))
+          (_ (=emph-tag-close))
+	  (_ (=skip-whitespace
+	      (=string "means"))))
+    (=result (list->string term))))
+
+(defun =quoted-term ()
+  (=let* ((_ (=or (=character #\")
+		  (=character #\LEFT_DOUBLE_QUOTATION_MARK)))
+	  (term (=one-or-more
+		 (=not (=or (=character #\")
+			    (=character #\RIGHT_DOUBLE_QUOTATION_MARK)))))
+	  (_ (=or (=character #\")
+	   	  (=character #\RIGHT_DOUBLE_QUOTATION_MARK)))
+	  (_ (=skip-whitespace
+	       (=string "means"))))
+    (=result (stringify term))))
+
+(defun =defined-term ()
+  (=or (=tagged-term)
+       (=quoted-term)))
 
 (defun strip-emph-tags (text)
-  (regex-replace "<E T=\"[0-9]+\">"
-                 (regex-replace "</E>" text "")
+  (regex-replace-all "<E T=\"[0-9]+\">"
+                 (regex-replace-all "</E>" text "")
                  ""))
+
+(defun strip-anchor-tags (text)
+  (regex-replace-all "<a[^>]*>"
+		 (regex-replace-all "</a>" text "")
+		 ""))
 
 (defun =defined-term-in-text (term)
   (=let* ((term
@@ -40,3 +64,14 @@
                 (not (char= #\" prev-character next-character)))))
         ((and (> start 0) (= end (- (length text) 1)))
          (not (alpha-char-p (character (subseq text (- start 1) start)))))))
+
+(defun offset-inside-tag (start end tag text)
+  (let ((open-tag-positions (all-matches (format nil "<~A" tag) text))
+	(close-tag-positions (all-matches (format nil "</~A>" tag) text)))
+    (loop
+       for open-tag-pos in open-tag-positions by #'cddr
+       for close-tag-pos in (rest close-tag-positions) by #'cddr
+       if (interval-overlap (list open-tag-pos close-tag-pos)
+			    (list start end))
+       do (return t)
+       finally (return nil))))

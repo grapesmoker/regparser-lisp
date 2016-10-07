@@ -23,20 +23,42 @@
 ;;       collect
 ;; 	(copy-interp-paragraph subpar))))
 
+;; (defun =interp-paragraph ()
+;;   (=let* ((result
+;;            (=list
+;;             (=skip-whitespace (=maybe (=or (=interp-marker)
+;; 					   (=emph-interp-marker))))
+;;             (=skip-whitespace (=maybe (=paragraph-title)))
+;;             (=skip-whitespace (=maybe (=or (=interp-marker)
+;; 					   (=emph-interp-marker))))
+;;             (=skip-whitespace (=maybe (=paragraph-title)))
+;;             (=zero-or-more
+;;              (=sentence)))))
+;;     (=result (list (cons 'FIRST-MARKER (elt result 0))
+;;                    (cons 'TITLE (elt result 1))
+;;                    (cons 'SECOND-MARKER (elt result 2))
+;;                    (cons 'SECOND-TITLE (elt result 3))
+;;                    (cons 'CONTENT (elt result 4))))))
+
 (defun =interp-paragraph ()
-  (=let* ((result
-           (=list
-            (=skip-whitespace (=maybe (=interp-marker)))
-            (=skip-whitespace (=maybe (=paragraph-title)))
-            (=skip-whitespace (=maybe (=interp-marker)))
-            (=skip-whitespace (=maybe (=paragraph-title)))
-            (=zero-or-more
-             (=sentence)))))
-    (=result (list (cons 'FIRST-MARKER (elt result 0))
-                   (cons 'TITLE (elt result 1))
-                   (cons 'SECOND-MARKER (elt result 2))
-                   (cons 'SECOND-TITLE (elt result 3))
-                   (cons 'CONTENT (elt result 4))))))
+  (=let* ((first-marker (=skip-whitespace (=maybe (=or (=interp-marker)
+						       (=emph-interp-marker)))))
+	  (first-title (=skip-whitespace (=maybe (=paragraph-title))))
+	  (second-marker (=skip-whitespace (=maybe (=or (=interp-marker)
+							(=emph-interp-marker)))))
+	  (second-title (=skip-whitespace (=maybe (=paragraph-title))))
+	  (third-marker (=skip-whitespace (=maybe (=or (=interp-marker)
+							(=emph-interp-marker)))))
+	  (third-title (=skip-whitespace (=maybe (=paragraph-title))))
+	  (content (=one-or-more (=sentence))))
+    (=result (list (cons :first-marker first-marker)
+		   (cons :first-title first-title)
+		   (cons :second-marker second-marker)
+		   (cons :second-title second-title)
+		   (cons :third-marker third-marker)
+		   (cons :third-title third-title)
+		   (cons :content content)))))
+
 
 (defun interp-paragraph->xml (interp-paragraph &optional (depth 0) (indent 4))
   (let* ((par-start-tag
@@ -65,6 +87,6 @@
 	  (loop
 	     for subpar in (interp-paragraph-subparagraphs interp-paragraph)
 	     collect
-	       (interp-paragraph->xml subpar (+ 1 depth)))))
+	       (interp-paragraph->xml subpar (+ 1 depth) indent))))
     
     (format nil "~A~A~A~{~A~}~A" par-start-tag title content subparagraphs par-end-tag)))

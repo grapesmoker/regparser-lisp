@@ -8,6 +8,7 @@
   (paragraphs '() :type list))
 
 (defun build-section (section-elem label-root)
+  ;; (declare (optimize (debug 3)))
   (let* ((sec-num-elem (first (get-elements-by-tag-name section-elem "SECTNO")))
          (subject-elem (first (get-elements-by-tag-name section-elem "SUBJECT")))
          (section-info (run (=section) (text sec-num-elem)))
@@ -21,10 +22,15 @@
           (flatten
            (loop
               for child across (children section-elem)
+	      ;; do (print child)
               collect
                 (when (and (element-p child)
                            (string= "P" (tag-name child)))
                   (build-paragraph child)))))
+	 ;; (dummy
+	 ;;  (progn
+	 ;;    (print section-number)
+	 ;;    (print (text sec-num-elem))))
          (markers
           (mapcar #'(lambda (par)
 		      (strip-marker (paragraph-marker par)))
@@ -34,15 +40,19 @@
          (hierarchy
           (compute-marker-hierarchy markers))
          (paragraph-tree
-          (build-paragraph-tree paragraphs hierarchy label)))
-    (make-section :section-number section-number
-                  :part-number part-number
-                  :subject subject
-                  :label label
-                  :paragraphs paragraph-tree)))
+	  (when paragraphs
+	    (build-paragraph-tree paragraphs hierarchy label))))
+    (when (and section-number part-number)
+      (make-section :section-number section-number
+		    :part-number part-number
+		    :subject subject
+		    :label label
+		    :paragraphs paragraph-tree))))
     
 
 (defun build-paragraph-tree (paragraphs hierarchy label-root)
+  (declare (optimize (debug 3)))
+  ;; (format t "~{~S~^ ~}~%~A~%" (mapcar #'marker-symbol hierarchy) label-root)
   (loop
      with last-par-at-depth = (make-hash-table)
      with top-level-pars = '()
@@ -133,7 +143,7 @@
 	  (format nil "~A<title>~A</title>~%"
 		  (indent (* (+ depth 1) indent))
 		  (section-subject section)))
-	 (section-end-tag (format nil "</section>~%"))
+	 (section-end-tag (format nil "~A</section>~%" (indent (* depth indent))))
 	 (paragraph-xml-list
 	  (loop
 	     for par in paragraphs

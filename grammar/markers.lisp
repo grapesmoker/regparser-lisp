@@ -107,6 +107,41 @@
    (=alpha-upper-marker)
    (=big-roman-marker)))
 
+(defun =emph-marker-1 ()
+  (=let* ((_ (=emph-tag-open))
+	  (marker (=marker))
+	  (_ (=emph-tag-close)))
+    (=result marker)))
+
+(defun =emph-marker-2 ()
+  (=let* ((left-paren (=character #\())
+	  (_ (=emph-tag-open))
+	  (marker (=or (=one-or-more (=digit))
+		       (=one-or-more (=satisfies #'lower-case-p))
+		       (=one-or-more (=satisfies #'upper-case-p))))
+	  (_ (=emph-tag-close))
+	  (right-paren (=character #\))))
+    (=result (stringify (list left-paren marker right-paren)))))
+
+(defun =emph-marker ()
+  (=or (=emph-marker-1)
+       (=emph-marker-2)))
+
+(defun =emph-marker-for-cites ()
+  (=let* ((left-paren (=character #\())
+	  (open-tag (=emph-tag-open))
+	  (marker (=or (=one-or-more (=digit))
+		       (=one-or-more (=satisfies #'lower-case-p))
+		       (=one-or-more (=satisfies #'upper-case-p))))
+	  (close-tag (=emph-tag-close))
+	  (right-paren (=character #\))))
+    (=result (concatenate 'string
+			  (stringify left-paren)
+			  open-tag
+			  (stringify marker)
+			  close-tag
+			  (stringify right-paren)))))
+
 (defun =interp-marker ()
   (=or
    (=interp-alpha-lower-marker)
@@ -114,6 +149,18 @@
    (=interp-small-roman-marker)
    (=interp-alpha-upper-marker)
    (=interp-big-roman-marker)))
+
+(defun =emph-interp-marker ()
+  (=let* ((_ (=emph-tag-open))
+	  (marker (=interp-marker))
+	  (_ (=emph-tag-close)))
+    (=result marker)))
+
+(defun =all-markers ()
+  (=or (=marker)
+       (=interp-marker)
+       (=emph-marker)
+       (=emph-interp-marker)))
 
 (defun =next-marker ()
   (=let* ((_
@@ -144,7 +191,7 @@
 	   (=or (=string "subpart")
 		(=string "Subpart")))
 	  (subpart-letter
-	   (=satisfies #'(lambda (ch)
-			   (find ch *uppercase-letters* :test #'string=)))))
-    (print subpart-letter)
+	   (=skip-whitespace
+	    (=satisfies #'(lambda (ch)
+			    (find ch *uppercase-letters* :test #'string=))))))
     (=result (stringify subpart-letter))))

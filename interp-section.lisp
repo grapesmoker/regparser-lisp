@@ -18,7 +18,7 @@
 	  (format nil "~A<title>~A</title>~%"
 		  (indent (* (+ depth 1) indent))
 		  (interp-section-title interp-section)))
-	 (section-end-tag (format nil "</interpSection>~%"))
+	 (section-end-tag (format nil "~A</interpSection>~%" (indent (* depth indent))))
 	 (paragraph-xml-list
 	  (loop
 	     for par in paragraphs
@@ -69,6 +69,10 @@
     (print "foobar")
     (setf (interp-section-paragraphs interp-section)
           (reverse (interp-section-paragraphs interp-section)))
+    (print "inserting interp cites")
+    (scan-and-interpolate-termrefs-and-cites (interp-section-paragraphs interp-section)
+					     (interp-section-label interp-section)
+					     :par-type :interp)
     interp-section))
            
 

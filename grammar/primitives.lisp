@@ -21,7 +21,7 @@
 (defparameter *numerics*
   (mapcar 'write-to-string (loop for i from 1 to 100 collect i)))
 
-(defparameter *foo* 'test)
+(defparameter *blank* '(""))
 
 (defun =word ()
   (=let* ((word (=one-or-more (=satisfies #'alpha-char-p))))
@@ -53,9 +53,9 @@
 
 (defun =misc-char ()
   (=string-of
-   (=one-of '(#\= #\" #\/ #\- #\SECTION_SIGN
+   (=one-of '(#\= #\" #\/ #\- #\SECTION_SIGN #\VULGAR_FRACTION_ONE_HALF #\%
               #\LEFT_DOUBLE_QUOTATION_MARK #\RIGHT_DOUBLE_QUOTATION_MARK
-              #\' #\( #\)))))
+              #\' #\( #\) #\[ #\] #\$ #\& #\#))))
 
 (defun =parens ()
   (=string-of

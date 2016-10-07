@@ -3,6 +3,17 @@
 (defstruct interpretations
   (sections '() :type list))
 
+(defun interpretations->xml (interps &optional (depth 0) (indent 4))
+  (let* ((interps-start-tag (format nil "~A<interpretations>~%" (indent (* depth indent))))
+	 (interps-end-tag (format nil "~A</interpretations>~%" (indent (* depth indent)))))
+    (format nil "~A~{~A~}~A"
+	    interps-start-tag
+	    (loop
+	       for section in (interpretations-sections interps)
+	       collect
+		 (interp-section->xml section (+ 1 depth) indent))
+	    interps-end-tag)))
+
 (defun find-interp-header (root part-number)
   (select-by #'(lambda (node)
                  (and (scan "HD" (tag-name node))

@@ -51,7 +51,7 @@
        with current-node = (nth-child 0 interp-extract)
        with current-label = part-number
        while (not (null current-node))
-       collect
+       append
 	 (let* ((tag (tag-name current-node))
 		(node-text (text current-node))
 		(intro (run (=intro) node-text))
@@ -60,38 +60,44 @@
 		(paragraph-header (run (=interp-paragraph-header) node-text)))
 	   (cond (intro
 		  (setf current-label (format nil "~A-Interp" part-number))
-		  (make-interp-section :label current-label))
+		  (list (make-interp-section :label current-label)))
 		 (subpart-letter
 		  (setf current-label (format nil "~A-Subpart-~A-Interp"
 					      part-number subpart-letter))
-		  (make-interp-section :label current-label))
+		  (list (make-interp-section :label current-label)))
 		 (section-header
 		  (setf current-label (format nil "~A-~A-Interp"
 					      (cdr (assoc :part section-header))
 					      (cdr (assoc :section section-header))))
-		  (make-interp-section :section-number (cdr (assoc :section section-header))
-				       :label current-label
-				       :title node-text))
+		  (list (make-interp-section :section-number (cdr (assoc :section section-header))
+					     :label current-label
+					     :title node-text)))
 		 (paragraph-header
 		  (setf current-label
 			(format nil "~A-~A-~{~A~^-~}-Interp"
 				part-number
 				(cdr (assoc :section paragraph-header))
 				(mapcar #'strip-marker (cdr (assoc :markers paragraph-header)))))
-		  (make-interp-paragraph :marker (car (last (cdr (assoc :markers paragraph-header))))
-					 :label current-label
-					 :target (subseq current-label
-							 0 (- (length current-label) 7))))
+		  (list (make-interp-paragraph
+			 :marker (car (last (cdr (assoc :markers paragraph-header))))
+			 :label current-label
+			 :target (subseq current-label
+					 0 (- (length current-label) 7)))))
 		 ((string= tag "P")
-		  (let* ((par-marker (run (=interp-marker) node-text))
-			 (par-label (format nil "~A-~A" current-label (strip-marker par-marker)))
-			 (par (first (build-paragraph current-node :par-mode :interp))))
-		    (setf (interp-paragraph-label par) par-label)
-		    par))))
+		  (let* ((pars (build-paragraph current-node :par-mode :interp)))
+		     (loop for par in pars
+		       do
+		     	 (setf (interp-paragraph-label par)
+		     	       (format nil "~A-~A"
+		     		       current-label
+		     		       (strip-marker (interp-paragraph-marker par)))))
+		    pars))))
 			 
        into interp-paragraphs
        do (setf current-node (next-sibling current-node))
-       finally (return interp-paragraphs))))
+       finally
+	 ;; (print interp-paragraphs)
+	 (return interp-paragraphs))))
 
        ;; (cond ((and (string= (tag-name current-node) "HD")
 	 ;; 	     (string= (get-attribute current-node "SOURCE") "HD1"))
